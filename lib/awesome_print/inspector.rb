@@ -52,7 +52,6 @@ module AwesomePrint
 
       @formatter = AwesomePrint::Formatter.new(self)
       @indentator = AwesomePrint::Indentator.new(@options[:indent].abs)
-      Thread.current[AP] ||= []
     end
 
     def current_indentation
@@ -66,14 +65,15 @@ module AwesomePrint
     # Dispatcher that detects data nesting and invokes object-aware formatter.
     #---------------------------------------------------------------------------
     def awesome(object)
-      if Thread.current[AP].include?(object.object_id)
+      nested_guard = (Thread.current[AP] ||= {})
+      if nested_guard[object.object_id]
         nested(object)
       else
         begin
-          Thread.current[AP] << object.object_id
+          nested_guard[object.object_id] = object
           unnested(object)
         ensure
-          Thread.current[AP].pop
+          nested_guard.delete(object.object_id)
         end
       end
     end
